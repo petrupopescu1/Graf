@@ -11,16 +11,20 @@ ifstream in("intrare.in");
 ofstream out("iesire.out");
 
 const int nmax = 100001;
-
+const int inf = 1<<30;
 class Graf
 {
 private:
     bool orientat;
     int nrNoduri;
     vector <int> listaAdiacenta[nmax];
+    vector <pair <int, int>> listaAdiacentaCost[nmax];
 public:
     Graf(int nrNoduri = 0, bool orientat = false);
+    void adaugaMuchie(int, int);
+    void adaugaMuchieCost(int, int, int);
     void citireMuchii(int);
+    void citireMuchiiCost(int);
     vector<int> BFS(int);
     void DFS(int, bool*);
     int nrComponenteConexe();
@@ -34,12 +38,29 @@ public:
     void MC();
     vector <int> citireHakimi();
     bool Hakimi(vector <int>);
+    vector <int> Dijkstra(int);
+    pair<int, vector <pair <int, int>>> Prim(int);
+    vector <int> BellmanFord(int);
+    void reuniune(int, int, vector<int>&, vector<int>&);
+    int gasire(int, vector<int>&);
+    void verifica(int, int, vector<int>&);
+    void paduri();
 };
 
 Graf :: Graf(int nrNoduri, bool orientat) : nrNoduri(nrNoduri), orientat(orientat)
 {
     this->nrNoduri = nrNoduri;
     this->orientat = orientat;
+}
+
+void Graf:: adaugaMuchie(int nod1, int nod2)
+{
+    listaAdiacenta[nod1].push_back(nod2);
+}
+
+void Graf::adaugaMuchieCost(int nod1, int nod2, int cost)
+{
+    listaAdiacentaCost[nod1].push_back(make_pair(nod2, cost));
 }
 
 void Graf::citireMuchii(int nrMuchii)
@@ -52,6 +73,20 @@ void Graf::citireMuchii(int nrMuchii)
         if(!orientat)
         {
             listaAdiacenta[nod2].push_back(nod1);
+        }
+    }
+}
+
+void Graf::citireMuchiiCost(int nrMuchii)
+{
+    int nod1, nod2, cost;
+    for(int i = 0; i < nrMuchii; i++)
+    {
+        in >> nod1 >> nod2 >> cost;
+        adaugaMuchieCost(nod1, nod2, cost);
+        if(!orientat)
+        {
+            adaugaMuchieCost(nod2, nod1, cost);
         }
     }
 }
@@ -325,6 +360,170 @@ bool Graf::Hakimi(vector <int> grade)
     return true;
 }
 
+vector <int> Graf::Dijkstra(int nodStart)
+{
+    vector <int> distanta(nmax);
+    fill(distanta.begin(), distanta.end(), inf);
+    priority_queue <pair <int, int>, vector <pair <int, int>>, greater<pair<int,int>>> coada;
+    bool vizitat[nmax] = {0};
+    distanta[nodStart] = 0;
+    coada.push(make_pair(0,nodStart));
+    while(!coada.empty())
+    {
+        int nodCurent = coada.top().second;
+        coada.pop();
+        if(!vizitat[nodCurent])
+        {
+            vizitat[nodCurent] = true;
+            for(auto vecin:listaAdiacentaCost[nodCurent])
+            {
+                if(!vizitat[vecin.first])
+                {
+                    if(distanta[nodCurent] + vecin.second < distanta[vecin.first])
+                    {
+                        distanta[vecin.first] = distanta[nodCurent] + vecin.second;
+                        coada.push(make_pair(distanta[vecin.first], vecin.first));
+                    }
+                }
+            }
+        }
+    }
+    return distanta;
+}
+
+pair<int, vector <pair <int, int>>> Graf::Prim(int nodStart)
+{
+    vector<pair<int, int>> rezultat;
+    vector<int> cost(nmax);
+    fill(cost.begin(), cost.end(), inf);
+    priority_queue<pair<int, int>, vector<pair<int, int>>, greater<pair<int, int>>> coada;
+    bool vizitat[nmax] = {0};
+    int costTotal = 0;
+    vector<int> parinte(nmax);
+    cost[nodStart] = 0;
+    coada.push(make_pair(0, nodStart));
+    while (!coada.empty()) {
+        int nodCurent = coada.top().second;
+        coada.pop();
+        if (!vizitat[nodCurent]) {
+            vizitat[nodCurent] = true;
+            costTotal += cost[nodCurent];
+            if (parinte[nodCurent] > 0) {
+                rezultat.push_back(make_pair(nodCurent, parinte[nodCurent]));
+            }
+            for (auto vecin:listaAdiacentaCost[nodCurent]) {
+                if (!vizitat[vecin.first]) {
+                    if (vecin.second < cost[vecin.first]) {
+                        cost[vecin.first] = vecin.second;
+                        parinte[vecin.first] = nodCurent;
+                        coada.push(make_pair(cost[vecin.first], vecin.first));
+                    }
+                }
+            }
+        }
+    }
+    return make_pair(costTotal, rezultat);
+}
+
+vector <int> Graf::BellmanFord(int nodStart)
+{
+    vector <int> cost(nmax, inf);
+    queue<int> coada;
+    bool esteInCoada[nmax] = {false};
+    vector <int> nrIteratii(nmax,0);
+    cost[nodStart] = 0;
+    coada.push(nodStart);
+    esteInCoada[nodStart] = true;
+    nrIteratii[nodStart]++;
+    while(!coada.empty())
+    {
+        int nodCurent = coada.front();
+        coada.pop();
+        esteInCoada[nodCurent] = false;
+        if(nrIteratii[nodCurent] == nrNoduri)
+        {
+            out << "Ciclu negativ!";
+            cost.clear();
+            return cost;
+        }
+        nrIteratii[nodCurent]++;
+        for (auto vecin:listaAdiacentaCost[nodCurent])
+        {
+            if(cost[nodCurent] + vecin.second < cost[vecin.first])
+            {
+                cost[vecin.first] = cost[nodCurent] + vecin.second;
+                if(!esteInCoada[vecin.first])
+                {
+                    coada.push(vecin.first);
+                    esteInCoada[vecin.first] = true;
+                }
+            }
+        }
+    }
+
+    return cost;
+}
+
+void Graf::reuniune(int nod1i, int nod2i, vector <int> &parinte, vector <int> &rang)
+{
+    int nod1 = gasire(nod1i,parinte);
+    int nod2 = gasire(nod2i, parinte);
+    if(rang[nod1] > rang[nod2])
+    {
+        parinte[nod1] = nod2;
+    }
+    else if(rang[nod2] <rang[nod1])
+    {
+        parinte[nod2] = nod1;
+    }
+    else
+    {
+        parinte[nod2] = nod1;
+        rang[nod2]++;
+    }
+}
+
+int Graf::gasire(int nod, vector <int> &parinte)
+{
+    if(parinte[nod] == -1)
+    {
+        return nod;
+    }
+    parinte[nod] = gasire(parinte[nod], parinte);
+    return parinte[nod];
+}
+
+void Graf::verifica(int nod1, int nod2, vector<int>&parinte)
+{
+    if(gasire(nod1,parinte) == gasire(nod2, parinte))
+    {
+        out << "DA\n";
+        return;
+    }
+    out << "NU\n";
+}
+
+void Graf::paduri()
+{
+    int n, m;
+    in >> n >> m;
+    int nod1, nod2, operatie;
+    vector <int> parinte(nmax, -1);
+    vector <int> rang(nmax, 0);
+    for(int i = 0 ; i < m ; i++)
+    {
+        in >> operatie >> nod1 >> nod2;
+        if(operatie == 1)
+        {
+            reuniune(nod1, nod2, parinte, rang);
+        }
+        else if(operatie == 2)
+        {
+            verifica(nod1, nod2, parinte);
+        }
+    }
+}
+
 int main() {
     int n, m;
     in >> n >> m;
@@ -340,4 +539,8 @@ int main() {
  * Componente tare conexe: https://www.infoarena.ro/job_detail/2796467?action=view-source
  * Componente biconexe: https://www.infoarena.ro/job_detail/2797668?action=view-source
  * Critical connections: https://leetcode.com/submissions/detail/584947814/
+ * Dijkstra: https://www.infoarena.ro/job_detail/2802636?action=view-source
+ * APM: https://www.infoarena.ro/job_detail/2802984?action=view-source
+ * BellmanFord: https://www.infoarena.ro/job_detail/2803009?action=view-source
+ * Disjoint: https://www.infoarena.ro/job_detail/2805986?action=view-source
  */
