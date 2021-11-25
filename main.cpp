@@ -479,7 +479,7 @@ void Graf::reuniune(int nod1i, int nod2i, vector <int> &parinte, vector <int> &r
     else
     {
         parinte[nod2] = nod1;
-        rang[nod2]++;
+        rang[nod1]++;
     }
 }
 
@@ -542,5 +542,5 @@ int main() {
  * Dijkstra: https://www.infoarena.ro/job_detail/2802636?action=view-source
  * APM: https://www.infoarena.ro/job_detail/2802984?action=view-source
  * BellmanFord: https://www.infoarena.ro/job_detail/2803009?action=view-source
- * Disjoint: https://www.infoarena.ro/job_detail/2805986?action=view-source
+ * Disjoint: https://www.infoarena.ro/job_detail/2808654?action=view-source
  */
