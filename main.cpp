@@ -10,11 +10,12 @@ using namespace std;
 ifstream in("intrare.in");
 ofstream out("iesire.out");
 
-const int nmax = 100001;
 const int inf = 1<<30;
+
 class Graf
 {
 private:
+    static const int nmax = 101;
     bool orientat;
     int nrNoduri;
     vector <int> listaAdiacenta[nmax];
@@ -45,6 +46,12 @@ public:
     int gasire(int, vector<int>&);
     void verifica(int, int, vector<int>&);
     void paduri();
+    void RoyFloyd(int[][nmax]);
+    void rezolvareRoyFloyd();
+    int diametru();
+    bool BFSFMax(int**, int*, int, int);
+    int EdmondsKarp(int**, int, int);
+    void citireAfisareEdmondsKarp(int, int, int);
 };
 
 Graf :: Graf(int nrNoduri, bool orientat) : nrNoduri(nrNoduri), orientat(orientat)
@@ -524,6 +531,153 @@ void Graf::paduri()
     }
 }
 
+void Graf::RoyFloyd(int matriceDrumuri[][nmax])
+{
+    for(int k = 1; k <= nrNoduri; k++)
+    {
+        for(int i = 1; i <= nrNoduri; i++)
+        {
+            for(int j = 1; j <= nrNoduri; j++)
+            {
+                matriceDrumuri[i][j] = min(matriceDrumuri[i][j], matriceDrumuri[i][k] + matriceDrumuri[k][j]);
+            }
+        }
+    }
+}
+
+void Graf::rezolvareRoyFloyd()
+{
+    int matriceDrumuri[nmax][nmax];
+    for(int i = 1; i <= nrNoduri; i++)
+    {
+        for(int j = 1; j <= nrNoduri; j++)
+        {
+            in >> matriceDrumuri[i][j];
+            if(matriceDrumuri[i][j] == 0 && i != j)
+            {
+                matriceDrumuri[i][j] = inf;
+            }
+        }
+    }
+    RoyFloyd(matriceDrumuri);
+    for(int i = 1; i <= nrNoduri; i++)
+    {
+        for(int j = 1; j <= nrNoduri; j++)
+        {
+            if(matriceDrumuri[i][j] == inf)
+            {
+                out << 0 << " ";
+                continue;
+            }
+            out << matriceDrumuri[i][j] << " ";
+        }
+        out << "\n";
+    }
+}
+
+int Graf::diametru()
+{
+    vector <int> distante(nmax);
+    distante = BFS(1);
+    int distantaMaxima = -1, nodMaxim;
+    for(int i = 1; i <= nrNoduri; i++)
+    {
+        if(distante[i] > distantaMaxima)
+        {
+            distantaMaxima = distante[i];
+            nodMaxim = i;
+        }
+    }
+    distante = BFS(nodMaxim);
+    distantaMaxima = -1;
+    for(int i = 1; i <= nrNoduri; i++)
+    {
+        if(distante[i] > distantaMaxima)
+        {
+            distantaMaxima = distante[i];
+        }
+    }
+    return distantaMaxima;
+}
+
+bool Graf::BFSFMax(int** grafRezidual, int* parinte, int sursa, int destinatie)
+{
+    queue <int> coadaBFS;
+    bool vizitatBFS[nmax] = {false};
+    coadaBFS.push(sursa);
+    vizitatBFS[sursa] = true;
+    parinte[sursa] = -1;
+    while(!coadaBFS.empty())
+    {
+        int nodCurent = coadaBFS.front();
+        coadaBFS.pop();
+        for(auto vecin:listaAdiacenta[nodCurent])
+        {
+            if(!vizitatBFS[vecin] && grafRezidual[nodCurent][vecin] > 0)
+            {
+                parinte[vecin] = nodCurent;
+                vizitatBFS[vecin] = true;
+                coadaBFS.push(vecin);
+                if(vecin == destinatie)
+                {
+                    return true;
+                }
+            }
+        }
+    }
+    return false;
+}
+
+int Graf::EdmondsKarp(int** grafRezidual, int sursa, int destinatie)
+{
+    int fluxMaximTotal = 0;
+    int parinte[nmax];
+    while(BFSFMax(grafRezidual, parinte, sursa, destinatie))
+    {
+        int fluxMaximDrum = inf;
+        int nodCurent = destinatie;
+        while(nodCurent != sursa)
+        {
+            fluxMaximDrum = min(fluxMaximDrum, grafRezidual[parinte[nodCurent]][nodCurent]);
+            nodCurent = parinte[nodCurent];
+        }
+        fluxMaximTotal += fluxMaximDrum;
+        nodCurent = destinatie;
+        while(nodCurent != sursa)
+        {
+            grafRezidual[parinte[nodCurent]][nodCurent] -= fluxMaximDrum;
+            grafRezidual[nodCurent][parinte[nodCurent]] += fluxMaximDrum;
+            nodCurent = parinte[nodCurent];
+        }
+    }
+    return fluxMaximTotal;
+}
+
+void Graf::citireAfisareEdmondsKarp(int nrMuchii, int sursa, int destinatie)
+{
+    int nod1, nod2, capacitate;
+    int **grafRezidual = new int*[nmax + 1];
+    for (int i = 1; i <= nmax; i++)
+    {
+        grafRezidual[i] = new int[nmax + 1];
+    }
+    for(int i = 1; i <=nmax; i++)
+    {
+        for(int j = 1; j <=nmax; j++)
+        {
+            grafRezidual[i][j] = 0;
+        }
+    }
+    for(int i = 0; i < nrMuchii; i++) {
+        in >> nod1 >> nod2 >> capacitate;
+        adaugaMuchie(nod1, nod2);
+        grafRezidual[nod1][nod2] = capacitate;
+        adaugaMuchie(nod2, nod1);
+    }
+    out << EdmondsKarp(grafRezidual, sursa, destinatie);
+    delete grafRezidual;
+}
+
 int main() {
     int n, m;
     in >> n >> m;
@@ -543,4 +697,7 @@ int main() {
  * APM: https://www.infoarena.ro/job_detail/2802984?action=view-source
  * BellmanFord: https://www.infoarena.ro/job_detail/2803009?action=view-source
  * Disjoint: https://www.infoarena.ro/job_detail/2808654?action=view-source
+ * RoyFloyd: https://infoarena.ro/job_detail/2811895?action=view-source
+ * Diametru arbore: https://infoarena.ro/job_detail/2812025?action=view-source
+ * Maxflow: https://infoarena.ro/job_detail/2815278?action=view-source (70 de puncte)
  */
