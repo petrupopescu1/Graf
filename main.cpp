@@ -16,6 +16,7 @@ class Graf
 {
 private:
     static const int nmax = 101;
+    static const int mmax = 501;
     bool orientat;
     int nrNoduri;
     vector <int> listaAdiacenta[nmax];
@@ -52,6 +53,8 @@ public:
     bool BFSFMax(int**, int*, int, int);
     int EdmondsKarp(int**, int, int);
     void citireAfisareEdmondsKarp(int, int, int);
+    void cicluEuler(int, vector<bool>&, vector<int>&);
+    void rezolvareEuler();
 };
 
 Graf :: Graf(int nrNoduri, bool orientat) : nrNoduri(nrNoduri), orientat(orientat)
@@ -678,6 +681,51 @@ void Graf::citireAfisareEdmondsKarp(int nrMuchii, int sursa, int destinatie)
     delete grafRezidual;
 }
 
+void Graf::cicluEuler(int nodStart, vector<bool> &vizitat, vector<int>& ciclu)
+{
+    stack <int> stiva;
+    stiva.push(nodStart);
+    while(!stiva.empty())
+    {
+        int nodCurent = stiva.top();
+        if(!listaAdiacentaCost[nodCurent].empty())
+        {
+            int vecin = listaAdiacentaCost[nodCurent].back().first;
+            int nrMuchie = listaAdiacentaCost[nodCurent].back().second;
+            listaAdiacentaCost[nodCurent].pop_back();
+            if(!vizitat[nrMuchie])
+            {
+                vizitat[nrMuchie] = true;
+                stiva.push(vecin);
+            }
+        }
+        else
+        {
+            ciclu.push_back(nodCurent);
+            stiva.pop();
+        }
+    }
+}
+
+void Graf::rezolvareEuler()
+{
+    vector <bool> vizitat(mmax,false);
+    vector <int> ciclu;
+    for(int i = 0; i <= nrNoduri; i++)
+    {
+        if(listaAdiacentaCost[i].size() % 2 == 1)
+        {
+            out << "-1";
+            return;
+        }
+    }
+    cicluEuler(1, vizitat, ciclu);
+    for(int i = 0; i < ciclu.size() - 1; i++)
+    {
+        out << ciclu[i] << " ";
+    }
+}
+
 int main() {
     int n, m;
     in >> n >> m;
@@ -700,4 +748,5 @@ int main() {
  * RoyFloyd: https://infoarena.ro/job_detail/2811895?action=view-source
  * Diametru arbore: https://infoarena.ro/job_detail/2812025?action=view-source
  * Maxflow: https://infoarena.ro/job_detail/2815278?action=view-source (70 de puncte)
+ * Ciclu Eulerian: https://infoarena.ro/job_detail/2821205?action=view-source
  */
